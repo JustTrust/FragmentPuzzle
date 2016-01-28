@@ -1,0 +1,20 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="org.belichenko.a.fragmentpuzl.MainActivity">
+    <item
+        android:id="@+id/action_cell3"
+        android:orderInCategory="100"
+        android:title="@string/cell_3"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_cell4"
+        android:orderInCategory="100"
+        android:title="@string/cell_4"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_cell5"
+        android:orderInCategory="100"
+        android:title="@string/cell_5"
+        app:showAsAction="never" />
+</menu>

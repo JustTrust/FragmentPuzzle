@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Fragments Puzzle</string>
+    <string name="action_settings">Settings</string>
+    <string name="cell_3">3x3 cells</string>
+    <string name="cell_4">4x4 cells</string>
+    <string name="cell_5">5x5 cells</string>
+</resources>
