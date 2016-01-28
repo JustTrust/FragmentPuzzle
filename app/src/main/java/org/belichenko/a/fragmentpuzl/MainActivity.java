@@ -3,6 +3,7 @@ package org.belichenko.a.fragmentpuzl;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.ColorDrawable;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -26,7 +27,7 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements View.OnTouchListener {
 
-    private static final int HADDING_PADDING = 3;
+    private static final int PADDING = 3;
     float startX, startY;
     private int sqQuantity = 3;
     private int sideSize;
@@ -55,7 +56,8 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     private void shuffle() {
         for (TextView tv : figures) {
             ColorDrawable cd = (ColorDrawable) tv.getBackground();
-            tv.setTextColor(cd.getColor());;
+            tv.setTextColor(cd.getColor());
+            ;
         }
         Collections.shuffle(figures);
         showFigures();
@@ -72,9 +74,9 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             rl.removeAllViews();
 
             for (int i = 1; i < (sqQuantity + 1); i++) {
-                topMargin = HADDING_PADDING * i + (sideSize * (i - 1));
+                topMargin = PADDING * i + (sideSize * (i - 1));
                 for (int j = 1; j < (sqQuantity + 1); j++) {
-                    leftMargin = HADDING_PADDING * j + (sideSize * (j - 1));
+                    leftMargin = PADDING * j + (sideSize * (j - 1));
 
                     TextView iv = figures.get(count);
                     count++;
@@ -101,8 +103,8 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         figures.clear();
         RelativeLayout rl = (RelativeLayout) findViewById(R.id.main_layot);
         rl.removeAllViews();
-        rl.getLayoutParams().height = HADDING_PADDING * (sqQuantity + 1) + sideSize * sqQuantity;
-        rl.getLayoutParams().width = HADDING_PADDING * (sqQuantity + 1) + sideSize * sqQuantity;
+        rl.getLayoutParams().height = PADDING * (sqQuantity + 1) + sideSize * sqQuantity;
+        rl.getLayoutParams().width = PADDING * (sqQuantity + 1) + sideSize * sqQuantity;
 
         for (int i = 0; i < (sqQuantity * sqQuantity); i++) {
             TextView tv = new TextView(this);
@@ -144,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         int height = size.y;
         Log.i("Screen", "Screen width = " + width + ", height = " + height);
         if (width > 1) {
-            sideSize = (width - HADDING_PADDING * (sqQuantity + 1)) / sqQuantity;
+            sideSize = (width - PADDING * (sqQuantity + 1)) / sqQuantity;
             Log.i("Screen", "SideSize = " + sideSize);
         } else {
             Snackbar.make(findViewById(R.id.main_layot), "You don't have screen", Snackbar.LENGTH_LONG)
@@ -232,13 +234,15 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     private void checkIsWinn() {
         for (int i = 0; i < figures.size(); i++) {
             TextView tv = figures.get(i);
-            if (! String.valueOf(i).equals(tv.getText())) {
+            if (!String.valueOf(i).equals(tv.getText())) {
                 // something wrong, not all figure in their places
                 return;
             }
         }
+        final MediaPlayer mp = MediaPlayer.create(this, R.raw.winn);
         Snackbar.make(findViewById(R.id.main_layot), "Congratulation! You WIN!", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show();
+        mp.start();
     }
 
 
