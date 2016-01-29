@@ -1,5 +1,6 @@
 package org.belichenko.a.fragmentpuzl;
 
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.ColorDrawable;
@@ -7,7 +8,9 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -18,6 +21,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -25,14 +31,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
-public class MainActivity extends AppCompatActivity implements View.OnTouchListener {
+public class MainActivity extends AppCompatActivity implements View.OnTouchListener, myConstant {
 
-    private static final int PADDING = 3;
-    float startX, startY;
+    private String[] menuTitles;
+    private DrawerLayout mDrawerLayout;
+    private ListView mDrawerList;
+    private ArrayAdapter<String> arrayAdapter;
+    private ActionBarDrawerToggle mDrawerToggle;
+    private CharSequence mDrawerTitle;
+    private CharSequence mTitle;
+
+    private float startX, startY;
     private int sqQuantity = 3;
     private int sideSize;
     private int colorDelta = 10;
     private ArrayList<TextView> figures = new ArrayList<>();
+
+    private boolean soundOn;
+    private boolean imageFromGallery;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +56,44 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
+        soundOn = mPrefs.getBoolean(SOUND_ON, false);
+        imageFromGallery = mPrefs.getBoolean(IMAGE_FROM_GALLERY, false);
+
+        mDrawerList = (ListView) findViewById(R.id.left_drawer);
+        mTitle = mDrawerTitle = getTitle();
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        menuTitles = getResources().getStringArray(R.array.menu_array);
+
+        // Set the adapter for the list view
+        arrayAdapter = new ArrayAdapter<String>(this, R.layout.drawer_list_item, menuTitles);
+        mDrawerList.setAdapter(arrayAdapter);
+        // Set the list's click listener
+        mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
+        // enable ActionBar app icon to behave as action to toggle nav drawer
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+
+        // ActionBarDrawerToggle ties together the the proper interactions
+        // between the sliding drawer and the action bar app icon
+        mDrawerToggle = new ActionBarDrawerToggle(
+                this,                  /* host Activity */
+                mDrawerLayout,         /* DrawerLayout object */
+                R.string.drawer_open,  /* "open drawer" description for accessibility */
+                R.string.drawer_close  /* "close drawer" description for accessibility */
+        ) {
+            public void onDrawerClosed(View view) {
+                getSupportActionBar().setTitle(mTitle);
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+
+            public void onDrawerOpened(View drawerView) {
+                getSupportActionBar().setTitle(mDrawerTitle);
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+        };
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -52,12 +106,81 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         fillDisplay();
     }
 
+    @Override
+    // Change menu item depends on flags
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        if (soundOn) {
+            menuTitles[4] = getString(R.string.sound_on);
+        } else {
+            menuTitles[4] = getString(R.string.sound_off);
+        }
+        if (imageFromGallery) {
+            menuTitles[3] = getString(R.string.from_gallery);
+        } else {
+            menuTitles[3] = getString(R.string.from_pallete);
+        }
+        arrayAdapter.notifyDataSetChanged();
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    /* The click listener for ListView in the navigation drawer */
+    private class DrawerItemClickListener implements ListView.OnItemClickListener {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            selectItem(position);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
+        SharedPreferences.Editor editor = mPrefs.edit();
+        editor.putBoolean(SOUND_ON, soundOn);
+        editor.putBoolean(IMAGE_FROM_GALLERY, imageFromGallery);
+        editor.apply();
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
+        soundOn = mPrefs.getBoolean(SOUND_ON, false);
+        imageFromGallery = mPrefs.getBoolean(IMAGE_FROM_GALLERY, false);
+    }
+
+    private void selectItem(int position) {
+
+        if (position == 0) {
+            sqQuantity = 3;
+            colorDelta = 15;
+            fillDisplay();
+        }
+        if (position == 1) {
+            sqQuantity = 4;
+            colorDelta = 10;
+            fillDisplay();
+        }
+        if (position == 2) {
+            sqQuantity = 5;
+            colorDelta = 5;
+            fillDisplay();
+        }
+        if (position == 3) {
+            imageFromGallery = !imageFromGallery;
+        }
+        if (position == 4) {
+            soundOn = !soundOn;
+        }
+
+        mDrawerLayout.closeDrawer(mDrawerList);
+    }
+
     // shuffle the figure on the screen
     private void shuffle() {
         for (TextView tv : figures) {
             ColorDrawable cd = (ColorDrawable) tv.getBackground();
             tv.setTextColor(cd.getColor());
-            ;
         }
         Collections.shuffle(figures);
         showFigures();
@@ -77,13 +200,13 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 topMargin = PADDING * i + (sideSize * (i - 1));
                 for (int j = 1; j < (sqQuantity + 1); j++) {
                     leftMargin = PADDING * j + (sideSize * (j - 1));
-
-                    TextView iv = figures.get(count);
-                    count++;
                     RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(sideSize, sideSize);
+                    TextView iv = figures.get(count);
+
                     rl.addView(iv, params);
                     iv.setX(leftMargin);
                     iv.setY(topMargin);
+                    count++;
                 }
             }
         }
@@ -217,6 +340,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         continue;
                     }
                     if (isPointInsideView(event.getRawX(), event.getRawY(), tv)) {
+                        if (soundOn) {
+                            final MediaPlayer mp = MediaPlayer.create(this, R.raw.change_place);
+                            mp.start();
+                        }
                         Collections.swap(figures, figures.indexOf(tv), figures.indexOf(view));
                         showFigures();
                         checkIsWinn();
@@ -239,12 +366,14 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 return;
             }
         }
-        final MediaPlayer mp = MediaPlayer.create(this, R.raw.winn);
+        if (soundOn) {
+            final MediaPlayer mp = MediaPlayer.create(this, R.raw.winn);
+            mp.start();
+        }
         Snackbar.make(findViewById(R.id.main_layot), "Congratulation! You WIN!", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show();
-        mp.start();
-    }
 
+    }
 
     //Check if point is inside of some figure
     public static boolean isPointInsideView(float x, float y, View view) {
