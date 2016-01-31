@@ -15,6 +15,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.design.internal.NavigationMenuPresenter;
@@ -149,6 +150,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             currentBitmap.recycle();
         }
 
+        if (! isExternalStorageAccessibly()){
+            currentBitmap = null;
+            return;
+        }
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
@@ -170,10 +175,16 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 imagesPath.add(cur.getString(dataColumn));
             } while (cur.moveToNext());
         }
+        cur.close();
+
         boolean isImageReady = false;
+        final Random random = new Random();
+        final int count = imagesPath.size();
+        if (count < 1) {
+            currentBitmap = null;
+            return;
+        }
         while (!isImageReady) {
-            final Random random = new Random();
-            final int count = imagesPath.size();
             int number = random.nextInt(count);
             String path = imagesPath.get(number);
             currentBitmap = BitmapFactory.decodeFile(path);
@@ -183,6 +194,24 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 currentBitmap = null;
             }
         }
+    }
+
+    /**
+     * Check accessibility of external storage
+     *
+     * @return true if external storage accessible
+     * and false in opposite case
+     */
+    private boolean isExternalStorageAccessibly() {
+
+        String state = Environment.getExternalStorageState();
+
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -279,9 +308,11 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 tv.setTextColor(cd.getColor());
             }
         }
-        final MediaPlayer mp = MediaPlayer.create(this, R.raw.shuffling);
-        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mp.start();
+        if (soundOn) {
+            final MediaPlayer mp = MediaPlayer.create(this, R.raw.shuffling);
+            mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mp.start();
+        }
         Collections.shuffle(figures);
         showFigures();
     }
@@ -499,7 +530,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                     }
                     if (isPointInsideView(event.getRawX(), event.getRawY(), tv)) {
                         if (soundOn) {
-                           mpChange.start();
+                            mpChange.start();
                         }
                         Collections.swap(figures, figures.indexOf(tv), figures.indexOf(view));
                         showFigures();
