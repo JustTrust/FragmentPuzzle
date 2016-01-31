@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="@string/new_game">
+        <menu>
+            <item
+                android:id="@+id/new_game3"
+                android:icon="@drawable/ic_new_game"
+                android:title="@string/cell_3" />
+            <item
+                android:id="@+id/new_game4"
+                android:icon="@drawable/ic_new_game"
+                android:title="@string/cell_4" />
+           <item
+                android:id="@+id/new_game5"
+                android:icon="@drawable/ic_new_game"
+                android:title="@string/cell_5" />
+        </menu>
+    </item>
+    <item android:title="@string/option">
+        <menu>
+            <item
+                android:id="@+id/nav_sound"
+                android:icon="@drawable/ic_action_volume_on"
+                android:title="@string/sound"
+                android:checkable="true"/>
+            <item
+                android:id="@+id/nav_gallery"
+                android:icon="@drawable/ic_action_picture"
+                android:title="@string/from_gallery"
+                android:checkable="true"/>
+        </menu>
+    </item>
+
+</menu>

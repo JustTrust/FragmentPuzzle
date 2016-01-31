@@ -6,16 +6,10 @@
     <string name="cell_5">5x5 cells</string>
     <string name="drawer_open">Open settings</string>
     <string name="drawer_close">Close settings</string>
-    <string name="sound_on">Sound On</string>
-    <string name="sound_off">Sound Off</string>
+    <string name="sound">Sound</string>
     <string name="from_gallery">From gallery</string>
-    <string name="from_pallete">From pallete</string>
-    <string-array name="menu_array">
-    <item>3x3 cells</item>
-    <item>4x4 cells</item>
-    <item>5x5 cells</item>
-    <item>From gallery</item>
-    <item>Sound</item>
-</string-array>
+    <string name="new_game">New game</string>
+    <string name="option">Option</string>
+    <string name="gallery_empty">Don\'t find any image in the gallery</string>
 
 </resources>

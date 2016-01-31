@@ -1,13 +1,27 @@
 package org.belichenko.a.fragmentpuzl;
 
+import android.content.CursorLoader;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.support.annotation.Nullable;
+import android.support.design.internal.NavigationMenuPresenter;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -21,34 +35,31 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements View.OnTouchListener, myConstant {
 
-    private String[] menuTitles;
     private DrawerLayout mDrawerLayout;
-    private ListView mDrawerList;
-    private ArrayAdapter<String> arrayAdapter;
+    private NavigationView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
-    private CharSequence mDrawerTitle;
-    private CharSequence mTitle;
 
     private float startX, startY;
-    private int sqQuantity = 3;
+    private int sqQuantity;
     private int sideSize;
     private int colorDelta = 10;
     private ArrayList<TextView> figures = new ArrayList<>();
 
+    private MediaPlayer mpChange;
     private boolean soundOn;
     private boolean imageFromGallery;
+    private Bitmap currentBitmap = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,24 +68,37 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        mpChange = MediaPlayer.create(this, R.raw.change_place);
+        mpChange.setAudioStreamType(AudioManager.STREAM_MUSIC);
+
         SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
         soundOn = mPrefs.getBoolean(SOUND_ON, false);
         imageFromGallery = mPrefs.getBoolean(IMAGE_FROM_GALLERY, false);
+        sqQuantity = mPrefs.getInt(SQUARE_QUANTITY, 3);
 
-        mDrawerList = (ListView) findViewById(R.id.left_drawer);
-        mTitle = mDrawerTitle = getTitle();
+        // Set up selection on the menu items on the first time
+        mDrawerList = (NavigationView) findViewById(R.id.nav_view);
+        MenuItem mi_sound = mDrawerList.getMenu().findItem(R.id.nav_sound);
+        mi_sound.setChecked(soundOn);
+        MenuItem mi_gallery = mDrawerList.getMenu().findItem(R.id.nav_gallery);
+        mi_gallery.setChecked(imageFromGallery);
+
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        menuTitles = getResources().getStringArray(R.array.menu_array);
 
-        // Set the adapter for the list view
-        arrayAdapter = new ArrayAdapter<String>(this, R.layout.drawer_list_item, menuTitles);
-        mDrawerList.setAdapter(arrayAdapter);
-        // Set the list's click listener
-        mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
-        // enable ActionBar app icon to behave as action to toggle nav drawer
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        // Set the left menu click listener
+        mDrawerList.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(MenuItem menuItem) {
+                return selectItem(menuItem);
+            }
+        });
 
+        // Enable ActionBar app icon to behave as action to toggle nav drawer
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+        }
         // ActionBarDrawerToggle ties together the the proper interactions
         // between the sliding drawer and the action bar app icon
         mDrawerToggle = new ActionBarDrawerToggle(
@@ -83,16 +107,15 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 R.string.drawer_open,  /* "open drawer" description for accessibility */
                 R.string.drawer_close  /* "close drawer" description for accessibility */
         ) {
-            public void onDrawerClosed(View view) {
-                getSupportActionBar().setTitle(mTitle);
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-            }
-
-            public void onDrawerOpened(View drawerView) {
-                getSupportActionBar().setTitle(mDrawerTitle);
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-            }
+//            public void onDrawerClosed(View view) {
+//                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+//            }
+//
+//            public void onDrawerOpened(View drawerView) {
+//                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+//            }
         };
+        mDrawerToggle.setDrawerIndicatorEnabled(true);
         mDrawerLayout.setDrawerListener(mDrawerToggle);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -107,38 +130,64 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     }
 
     @Override
-    // Change menu item depends on flags
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        if (soundOn) {
-            menuTitles[4] = getString(R.string.sound_on);
+    public void onBackPressed() {
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
         } else {
-            menuTitles[4] = getString(R.string.sound_off);
+            super.onBackPressed();
         }
-        if (imageFromGallery) {
-            menuTitles[3] = getString(R.string.from_gallery);
-        } else {
-            menuTitles[3] = getString(R.string.from_pallete);
-        }
-        arrayAdapter.notifyDataSetChanged();
-        return super.onPrepareOptionsMenu(menu);
     }
 
-    /* The click listener for ListView in the navigation drawer */
-    private class DrawerItemClickListener implements ListView.OnItemClickListener {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            selectItem(position);
+    /**
+     * Get random image from gallery and set it to the shared variable
+     * or set null
+     */
+    private void getRandomImage() {
+
+        if (currentBitmap != null) {
+            currentBitmap.recycle();
+        }
+
+        Display display = getWindowManager().getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        int screenWidth = size.x;
+
+        String[] projection = new String[]{
+                MediaStore.Images.Media.DATA,
+        };
+
+        Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        Cursor cur = new CursorLoader(this, images, projection, "", null, "").loadInBackground();
+
+        final ArrayList<String> imagesPath = new ArrayList<String>();
+        if (cur.moveToFirst()) {
+
+            int dataColumn = cur.getColumnIndex(
+                    MediaStore.Images.Media.DATA);
+            do {
+                imagesPath.add(cur.getString(dataColumn));
+            } while (cur.moveToNext());
+        }
+        boolean isImageReady = false;
+        while (!isImageReady) {
+            final Random random = new Random();
+            final int count = imagesPath.size();
+            int number = random.nextInt(count);
+            String path = imagesPath.get(number);
+            currentBitmap = BitmapFactory.decodeFile(path);
+            if (currentBitmap.getWidth() > screenWidth && currentBitmap.getHeight() > screenWidth) {
+                isImageReady = true;
+            } else {
+                currentBitmap = null;
+            }
         }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
-        SharedPreferences.Editor editor = mPrefs.edit();
-        editor.putBoolean(SOUND_ON, soundOn);
-        editor.putBoolean(IMAGE_FROM_GALLERY, imageFromGallery);
-        editor.apply();
     }
 
     @Override
@@ -147,46 +196,99 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
         soundOn = mPrefs.getBoolean(SOUND_ON, false);
         imageFromGallery = mPrefs.getBoolean(IMAGE_FROM_GALLERY, false);
+        sqQuantity = mPrefs.getInt(SQUARE_QUANTITY, 3);
     }
 
-    private void selectItem(int position) {
+    private boolean selectItem(MenuItem menuItem) {
 
-        if (position == 0) {
+        int id = menuItem.getItemId();
+
+        if (id == R.id.new_game3) {
             sqQuantity = 3;
             colorDelta = 15;
             fillDisplay();
         }
-        if (position == 1) {
+        if (id == R.id.new_game4) {
             sqQuantity = 4;
             colorDelta = 10;
             fillDisplay();
         }
-        if (position == 2) {
+        if (id == R.id.new_game5) {
             sqQuantity = 5;
             colorDelta = 5;
             fillDisplay();
         }
-        if (position == 3) {
-            imageFromGallery = !imageFromGallery;
+        if (id == R.id.nav_gallery) {
+            // check image from gallery first
+            if (!imageFromGallery) {
+                if (currentBitmap != null) {
+                    imageFromGallery = true;
+                } else {
+                    Toast.makeText(this, getString(R.string.gallery_empty), Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                imageFromGallery = false;
+            }
+            SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
+            SharedPreferences.Editor editor = mPrefs.edit();
+            editor.putBoolean(IMAGE_FROM_GALLERY, imageFromGallery);
+            editor.apply();
+            menuItem.setChecked(imageFromGallery);
+            fillDisplay();
         }
-        if (position == 4) {
+        if (id == R.id.nav_sound) {
             soundOn = !soundOn;
+            SharedPreferences mPrefs = this.getSharedPreferences(MAIN_PREFERENCE, MODE_PRIVATE);
+            SharedPreferences.Editor editor = mPrefs.edit();
+            editor.putBoolean(SOUND_ON, soundOn);
+            editor.apply();
+            menuItem.setChecked(soundOn);
         }
-
+        updateNavigationView();
         mDrawerLayout.closeDrawer(mDrawerList);
+        return true;
     }
 
-    // shuffle the figure on the screen
+    /**
+     * Hack to update navigation view
+     * from stack over flow
+     */
+
+    private void updateNavigationView() {
+        try {
+            Field presenterField = NavigationView.class.getDeclaredField("mPresenter");
+            presenterField.setAccessible(true);
+            ((NavigationMenuPresenter) presenterField.get(mDrawerList)).updateMenuView(false);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Shuffle the figure on the shared list
+     * and then show them in new order
+     */
     private void shuffle() {
         for (TextView tv : figures) {
-            ColorDrawable cd = (ColorDrawable) tv.getBackground();
-            tv.setTextColor(cd.getColor());
+            if (imageFromGallery) {
+                tv.setTextSize(0f);
+            } else {
+                ColorDrawable cd = (ColorDrawable) tv.getBackground();
+                tv.setTextColor(cd.getColor());
+            }
         }
+        final MediaPlayer mp = MediaPlayer.create(this, R.raw.shuffling);
+        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mp.start();
         Collections.shuffle(figures);
         showFigures();
     }
 
-    // shows figures on the screen
+    /**
+     * Shows figures on the screen from shared ArrayList
+     */
     private void showFigures() {
         int leftMargin;
         int topMargin;
@@ -212,12 +314,21 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         }
     }
 
-    // first time create figures
+    /**
+     * Create figures and put them in to shared ArrayList
+     */
     private void fillDisplay() {
-        int rColor = getMagicColor();
-        int gColor = getMagicColor();
-        int bColor = getMagicColor();
 
+        int rColor = 0;
+        int gColor = 0;
+        int bColor = 0;
+        getRandomImage();
+
+        if (!imageFromGallery) {
+            rColor = getMagicColor();
+            gColor = getMagicColor();
+            bColor = getMagicColor();
+        }
         ActionBar bar = getSupportActionBar();
         if (bar != null) {
             bar.setBackgroundDrawable(new ColorDrawable(Color.rgb(rColor, gColor, bColor)));
@@ -232,21 +343,48 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         for (int i = 0; i < (sqQuantity * sqQuantity); i++) {
             TextView tv = new TextView(this);
             tv.setOnTouchListener(this);
-            tv.setBackgroundColor(Color.rgb(rColor, gColor, bColor));
+            if (imageFromGallery) {
+                tv.setBackground(getPieceOfPicture(i));
+            } else {
+                tv.setBackgroundColor(Color.rgb(rColor, gColor, bColor));
+                rColor = rColor + colorDelta;
+                gColor = gColor + colorDelta;
+                bColor = bColor + colorDelta;
+            }
             tv.setText(String.valueOf(i));
             tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
             tv.setGravity(Gravity.CENTER);
             figures.add(tv);
-            rColor = rColor + colorDelta;
-            gColor = gColor + colorDelta;
-            bColor = bColor + colorDelta;
+
         }
         showFigures();
     }
 
-    // get color for first figure
+    @Nullable
+    /**
+     * Cut little pieces from random picture
+     * @return The Drawable if found image or null otherwise
+     * @param  int index of cell in the square
+     */
+    public Drawable getPieceOfPicture(int i) {
+        if (currentBitmap != null) {
+            int line = i / sqQuantity;
+            int row = i % sqQuantity;
+            int x = PADDING * (row + 1) + (sideSize * row);
+            int y = PADDING * (line + 1) + (sideSize * line);
+            Bitmap resultBitmap = Bitmap.createBitmap(currentBitmap, x, y, sideSize, sideSize);
+            return new BitmapDrawable(getResources(), resultBitmap);
+        }
+        return null;
+    }
+
+    /**
+     * Return color for first figure
+     *
+     * @return int index of color
+     */
     private int getMagicColor() {
-        Random rd = new Random();
+        final Random rd = new Random();
 
         switch (sqQuantity) {
             case 3:
@@ -259,7 +397,11 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         return rd.nextInt(95);
     }
 
-    // Calculate one side of figure depends on screen resolution
+    /**
+     * Calculate one side of figure depends on screen resolution
+     * and set up result in shared variable
+     */
+
     private void calculateSideSize() {
 
         Display display = getWindowManager().getDefaultDisplay();
@@ -285,11 +427,27 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     }
 
     @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        mDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
 
         if (id == R.id.action_cell3) {
             sqQuantity = 3;
@@ -341,8 +499,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                     }
                     if (isPointInsideView(event.getRawX(), event.getRawY(), tv)) {
                         if (soundOn) {
-                            final MediaPlayer mp = MediaPlayer.create(this, R.raw.change_place);
-                            mp.start();
+                           mpChange.start();
                         }
                         Collections.swap(figures, figures.indexOf(tv), figures.indexOf(view));
                         showFigures();
@@ -357,7 +514,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         return true;
     }
 
-    // Check is all figure in their places
+    /**
+     * Check is all figure in their places
+     * and if it is then play win sound and show message
+     */
     private void checkIsWinn() {
         for (int i = 0; i < figures.size(); i++) {
             TextView tv = figures.get(i);
@@ -368,6 +528,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         }
         if (soundOn) {
             final MediaPlayer mp = MediaPlayer.create(this, R.raw.winn);
+            mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mp.start();
         }
         Snackbar.make(findViewById(R.id.main_layot), "Congratulation! You WIN!", Snackbar.LENGTH_LONG)
@@ -375,7 +536,15 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
     }
 
-    //Check if point is inside of some figure
+    /**
+     * Check if point is inside of some figure
+     *
+     * @param x    coordinate of point
+     * @param y    coordinate of point
+     * @param view some View witch we check
+     * @return boolean if point with coordinate x,y inside view
+     */
+
     public static boolean isPointInsideView(float x, float y, View view) {
 
         int location[] = new int[2];
