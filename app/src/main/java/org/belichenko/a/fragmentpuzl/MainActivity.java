@@ -107,15 +107,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 mDrawerLayout,         /* DrawerLayout object */
                 R.string.drawer_open,  /* "open drawer" description for accessibility */
                 R.string.drawer_close  /* "close drawer" description for accessibility */
-        ) {
-//            public void onDrawerClosed(View view) {
-//                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-//            }
-//
-//            public void onDrawerOpened(View drawerView) {
-//                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-//            }
-        };
+        );
         mDrawerToggle.setDrawerIndicatorEnabled(true);
         mDrawerLayout.setDrawerListener(mDrawerToggle);
 
@@ -253,7 +245,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 if (currentBitmap != null) {
                     imageFromGallery = true;
                 } else {
-                    Toast.makeText(this, getString(R.string.gallery_empty), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.gallery_empty), Toast.LENGTH_LONG).show();
                 }
             } else {
                 imageFromGallery = false;

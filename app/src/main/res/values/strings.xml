@@ -9,7 +9,7 @@
     <string name="sound">Sound</string>
     <string name="from_gallery">From gallery</string>
     <string name="new_game">New game</string>
-    <string name="option">Option</string>
-    <string name="gallery_empty">Don\'t find any image in the gallery</string>
+    <string name="option">Options</string>
+    <string name="gallery_empty">Don't find any image in the gallery</string>
 
 </resources>
