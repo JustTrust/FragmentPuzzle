@@ -45,7 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
-public class MainActivity extends AppCompatActivity implements View.OnTouchListener, myConstant {
+public class MainActivity extends AppCompatActivity implements View.OnTouchListener, MyConstant {
 
     private DrawerLayout mDrawerLayout;
     private NavigationView mDrawerList;
